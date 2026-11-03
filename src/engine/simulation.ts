@@ -191,7 +191,15 @@ export class EcosystemEngine {
     this.stats.deathsCount = 0;
     this.stats.timeElapsed = 0;
     this.stats.tick = 0;
+    this.stats.maxGeneration = 1;
+    this.stats.extinctSpecies = [];
     this.organismCounter = 0;
+    this.foodCounter = 0;
+    this.nextStatRecordTime = 0;
+    this.selectedOrganismId = null;
+    this.disasterParticles = [];
+    this.environment.disasterActive = null;
+    this.environment.disasterTimeRemaining = 0;
 
     // Seed initial plants (flora)
     const plantCount = Math.floor((this.environment.worldWidth * this.environment.worldHeight) / 5500);
