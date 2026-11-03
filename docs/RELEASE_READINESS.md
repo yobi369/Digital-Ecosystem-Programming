@@ -7,7 +7,8 @@ The project is an early-stage browser simulation. A successful Vite build is not
 - [x] React/Vite application boots from `src/main.tsx`.
 - [x] TypeScript compiler check is available through `bun run lint`.
 - [x] Production bundle build is available through `bun run build`.
-- [ ] Automated unit/integration test suite.
+- [x] Initial Bun regression test for world reset and telemetry restart.
+- [ ] Broad unit/integration/property test suite covering core simulation rules.
 - [ ] Deterministic seeded simulation.
 - [ ] Validated and versioned import/save schema.
 - [ ] Browser accessibility and responsive acceptance tests.
