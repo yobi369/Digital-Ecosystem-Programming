@@ -44,6 +44,12 @@ describe("EcosystemEngine world reset", () => {
 
     engine.update(0.02);
     expect(engine.history.length).toBeGreaterThan(0);
-    expect(engine.history[0].time).toBeGreaterThan(0);
+    expect(engine.history[0].time).toBe(0);
+
+    for (let step = 0; step < 11; step += 1) {
+      engine.update(0.1);
+    }
+    expect(engine.history.length).toBeGreaterThan(1);
+    expect(engine.history[engine.history.length - 1].time).toBeGreaterThanOrEqual(1);
   });
 });
