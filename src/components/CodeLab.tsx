@@ -153,7 +153,7 @@ export const CodeLab: React.FC<CodeLabProps> = ({ engine }) => {
               The implementation currently uses a linear size contribution plus genome metabolism, temperature penalty, and toxicity penalty.
             </p>
             <div className="p-3 bg-[#080410] border border-purple-950 rounded-xl font-mono text-xs text-cyan-300">
-              E_burn = B_0 · (Mass)^0.75 + Speed^1.2 · Cost_locomotion
+              E_burn = (metabolism + size × 0.008 + temperaturePenalty + toxicityPenalty) × Δt
             </div>
             <div className="text-[11px] text-purple-400 font-mono">
               This is a heuristic cost rule, not Kleiber's law. No empirical allometric calibration is currently supplied.
@@ -170,7 +170,7 @@ export const CodeLab: React.FC<CodeLabProps> = ({ engine }) => {
               Organisms use local sensing and steering rules. This is an agent-based approximation; it is not a complete or validated implementation of Reynolds' flocking model.
             </p>
             <div className="p-3 bg-[#080410] border border-purple-950 rounded-xl font-mono text-xs text-amber-300">
-              F_steer = w_coh · F_cohesion + w_sep · F_separation + w_hunt · F_target
+              steering = weighted local behaviour signals (implementation-specific)
             </div>
             <div className="text-[11px] text-purple-400 font-mono">
               Behaviour depends on the current engine's heuristic steering and genome parameters; it should not be interpreted as a measured biological mechanism.
@@ -187,7 +187,7 @@ export const CodeLab: React.FC<CodeLabProps> = ({ engine }) => {
               Offspring receive mutated genome values through the project's mutation helper. The current implementation should not be described as a DEAP pipeline or Gaussian mutation without verification.
             </p>
             <div className="p-3 bg-[#080410] border border-purple-950 rounded-xl font-mono text-xs text-fuchsia-300">
-              Gene_child = Gene_parent + N(0, σ_mutation · MutRate)
+              offspringGenome = mutateGenome(parentGenome, mutationRate)
             </div>
             <div className="text-[11px] text-purple-400 font-mono">
               Mutation can change simulated traits; adaptive benefit is an outcome to measure, not a guaranteed result.
