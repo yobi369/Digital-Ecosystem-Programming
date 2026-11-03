@@ -1,6 +1,12 @@
 {
   "name": "Digital Ecosystem Programming Lab",
-  "description": "An interactive artificial life & evolutionary biology simulation studio featuring genetic mutations, emergent behaviors, food webs, and environmental physics inspired by Fringe Coding.",
+  "description": "Interactive artificial-life and ecological simulation laboratory with agent-based organisms, mutation, resource dynamics, environmental disturbances, telemetry, and educational experiments. Exploratory model; not scientifically validated.",
   "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+  "majorCapabilities": [
+    "AGENT_BASED_ECOSYSTEM_SIMULATION",
+    "GENOME_AND_MUTATION_EXPLORATION",
+    "ECOLOGICAL_TELEMETRY",
+    "EDUCATIONAL_SCENARIOS",
+    "PYTHON_EXAMPLE_EXPORT"
+  ]
 }
