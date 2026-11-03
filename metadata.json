@@ -1,0 +1,6 @@
+{
+  "name": "Digital Ecosystem Programming Lab",
+  "description": "An interactive artificial life & evolutionary biology simulation studio featuring genetic mutations, emergent behaviors, food webs, and environmental physics inspired by Fringe Coding.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
