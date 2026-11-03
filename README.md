@@ -46,7 +46,7 @@ bun run lint
 bun run build
 ```
 
-The current automated gates perform TypeScript compilation and a production Vite build. They are not a substitute for behavioural, scientific, accessibility, or browser-based acceptance tests. The project must not claim a test suite or coverage percentage until those checks exist and run in CI.
+The current automated gates run a focused Bun regression test for world-reset/telemetry behaviour, TypeScript compilation, and a production Vite build. They are not a substitute for broad behavioural, scientific, accessibility, or browser-based acceptance tests. Test coverage remains limited and is not represented as comprehensive.
 
 ## Configuration and secrets
 
