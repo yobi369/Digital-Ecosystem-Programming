@@ -52,6 +52,24 @@ export const PersistenceModal: React.FC<PersistenceModalProps> = ({
     }
   };
 
+  const handleExportManifest = () => {
+    try {
+      const manifest = engine.createExperimentManifest();
+      const blob = new Blob([JSON.stringify(manifest, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'ecosystem_experiment_manifest_' + Date.now() + '.json';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      showToast('Versioned experiment manifest exported.');
+    } catch {
+      showToast('Failed to export experiment manifest.', 'error');
+    }
+  };
+
   const handleExportCSV = () => {
     try {
       const csvStr = engine.exportTelemetryCSV();
@@ -241,15 +259,22 @@ export const PersistenceModal: React.FC<PersistenceModalProps> = ({
               </span>
             </div>
             <p className="text-xs text-purple-400">
-              Export high-frequency population counts, trophic biomass, speed allele shifts, and environmental metrics formatted for academic modeling in Python Pandas, R, or Excel.
+              Export telemetry and a versioned manifest with the seed, model revision, initial-state fingerprint, parameters, and run/step metadata. Keep the matching world snapshot and intervention notes when replaying imported or interactively modified worlds.
             </p>
-            <div className="pt-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2">
               <button
                 onClick={handleExportCSV}
-                className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-amber-600 to-orange-500 hover:from-amber-500 hover:to-orange-400 text-white font-mono text-xs font-bold flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(245,158,11,0.4)] transition-all cursor-pointer"
+                className="py-2.5 px-4 rounded-xl bg-gradient-to-r from-amber-600 to-orange-500 hover:from-amber-500 hover:to-orange-400 text-white font-mono text-xs font-bold flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(245,158,11,0.4)] transition-all cursor-pointer"
               >
                 <Download className="w-4 h-4" />
-                <span>Download Telemetry Dataset (.CSV)</span>
+                <span>Download Telemetry CSV</span>
+              </button>
+              <button
+                onClick={handleExportManifest}
+                className="py-2.5 px-4 rounded-xl bg-purple-800/70 hover:bg-purple-700 border border-purple-600/50 text-purple-100 font-mono text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer"
+              >
+                <FileCode className="w-4 h-4" />
+                <span>Export Experiment Manifest</span>
               </button>
             </div>
           </div>

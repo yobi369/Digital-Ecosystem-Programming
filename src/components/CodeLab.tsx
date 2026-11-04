@@ -47,10 +47,10 @@ export const CodeLab: React.FC<CodeLabProps> = ({ engine }) => {
         <div>
           <div className="flex items-center gap-2 text-xs font-mono text-purple-400 uppercase tracking-wider">
             <Code2 className="w-3.5 h-3.5 text-indigo-400" />
-            <span>Fringe Coding Architecture & Export</span>
+            <span>Simulation implementation & export</span>
           </div>
           <h2 className="text-xl font-extrabold text-white">
-            PYTHON, DEAP & NETWORKX CODE STUDIO
+            PYTHON EXPORT & MODEL NOTES
           </h2>
         </div>
 
@@ -71,7 +71,7 @@ export const CodeLab: React.FC<CodeLabProps> = ({ engine }) => {
                 activeCodeTab === 'math' ? 'bg-purple-600 text-white font-bold' : 'text-purple-300'
               }`}
             >
-              Math & Physics Rules
+              Model assumptions
             </button>
             <button
               onClick={() => setActiveCodeTab('stack')}
@@ -112,7 +112,7 @@ export const CodeLab: React.FC<CodeLabProps> = ({ engine }) => {
           <div className="flex items-center justify-between text-xs font-mono text-purple-400 pb-2 border-b border-purple-950">
             <div className="flex items-center gap-2">
               <Terminal className="w-4 h-4 text-emerald-400" />
-              <span>fringe_ecosystem_simulation.py (Standalone Pygame + DEAP script)</span>
+              <span>fringe_ecosystem_simulation.py (Standalone Pygame example script)</span>
             </div>
             <span>Python 3.10+</span>
           </div>
@@ -129,17 +129,17 @@ export const CodeLab: React.FC<CodeLabProps> = ({ engine }) => {
           <div className="bg-[#120b22] border border-purple-900/40 rounded-2xl p-5 flex flex-col gap-3 shadow-xl">
             <div className="flex items-center gap-2 text-rose-400 font-mono font-bold text-xs uppercase">
               <Cpu className="w-4 h-4" />
-              <span>1. Lotka-Volterra Predator-Prey Equations</span>
+              <span>Reference: Lotka–Volterra predator–prey model</span>
             </div>
             <p className="text-xs text-purple-300">
-              Models continuous interaction between prey organisms (grazers) and predator density (stalkers).
+              Reference equations only. The current engine does not solve this differential-equation system; it updates individual agents using local rules.
             </p>
             <div className="p-3 bg-[#080410] border border-purple-950 rounded-xl font-mono text-xs text-emerald-300">
               dx/dt = α · x - β · x · y <br />
               dy/dt = δ · x · y - γ · y
             </div>
             <div className="text-[11px] text-purple-400 font-mono">
-              Where α = prey birth rate, β = predation encounter rate, γ = predator mortality, δ = energy conversion efficiency.
+              These parameters are not fitted or used by the current simulation. The chart labelled phase space is a descriptive plot of agent counts, not a validated Lotka–Volterra solution.
             </div>
           </div>
 
@@ -147,16 +147,16 @@ export const CodeLab: React.FC<CodeLabProps> = ({ engine }) => {
           <div className="bg-[#120b22] border border-purple-900/40 rounded-2xl p-5 flex flex-col gap-3 shadow-xl">
             <div className="flex items-center gap-2 text-cyan-400 font-mono font-bold text-xs uppercase">
               <Cpu className="w-4 h-4" />
-              <span>2. Allometric Metabolic Scaling (Kleiber)</span>
+              <span>Current engine: basal energy cost</span>
             </div>
             <p className="text-xs text-purple-300">
-              Larger physical mass scales basal energy expenditure non-linearly.
+              The implementation currently uses a linear size contribution plus genome metabolism, temperature penalty, and toxicity penalty.
             </p>
             <div className="p-3 bg-[#080410] border border-purple-950 rounded-xl font-mono text-xs text-cyan-300">
-              E_burn = B_0 · (Mass)^0.75 + Speed^1.2 · Cost_locomotion
+              E_burn = (metabolism + size × 0.008 + temperaturePenalty + toxicityPenalty) × Δt
             </div>
             <div className="text-[11px] text-purple-400 font-mono">
-              Enforces physical realism: massive organisms must consume higher caloric density to sustain velocity.
+              This is a heuristic cost rule, not Kleiber's law. No empirical allometric calibration is currently supplied.
             </div>
           </div>
 
@@ -164,16 +164,16 @@ export const CodeLab: React.FC<CodeLabProps> = ({ engine }) => {
           <div className="bg-[#120b22] border border-purple-900/40 rounded-2xl p-5 flex flex-col gap-3 shadow-xl">
             <div className="flex items-center gap-2 text-amber-400 font-mono font-bold text-xs uppercase">
               <Cpu className="w-4 h-4" />
-              <span>3. Reynolds Flocking & Autonomous Steering</span>
+              <span>Current engine: local steering heuristics</span>
             </div>
             <p className="text-xs text-purple-300">
-              Emergent schooling behaviors arise from local vector summation without central coordination.
+              Organisms use local sensing and steering rules. This is an agent-based approximation; it is not a complete or validated implementation of Reynolds' flocking model.
             </p>
             <div className="p-3 bg-[#080410] border border-purple-950 rounded-xl font-mono text-xs text-amber-300">
-              F_steer = w_coh · F_cohesion + w_sep · F_separation + w_hunt · F_target
+              steering = weighted local behaviour signals (implementation-specific)
             </div>
             <div className="text-[11px] text-purple-400 font-mono">
-              Higher herd instinct alleles increase group cohesion while avoiding overcrowding collisions.
+              Behaviour depends on the current engine's heuristic steering and genome parameters; it should not be interpreted as a measured biological mechanism.
             </div>
           </div>
 
@@ -181,16 +181,16 @@ export const CodeLab: React.FC<CodeLabProps> = ({ engine }) => {
           <div className="bg-[#120b22] border border-purple-900/40 rounded-2xl p-5 flex flex-col gap-3 shadow-xl">
             <div className="flex items-center gap-2 text-fuchsia-400 font-mono font-bold text-xs uppercase">
               <Cpu className="w-4 h-4" />
-              <span>4. Gaussian Chromosomal Mutation</span>
+              <span>Current engine: genome mutation</span>
             </div>
             <p className="text-xs text-purple-300">
-              Offspring inherit parental alleles with normal distribution perturbation.
+              Offspring receive mutated genome values through the project's mutation helper. The current implementation should not be described as a DEAP pipeline or Gaussian mutation without verification.
             </p>
             <div className="p-3 bg-[#080410] border border-purple-950 rounded-xl font-mono text-xs text-fuchsia-300">
-              Gene_child = Gene_parent + N(0, σ_mutation · MutRate)
+              offspringGenome = mutateGenome(parentGenome, mutationRate, seededRandom)
             </div>
             <div className="text-[11px] text-purple-400 font-mono">
-              Creates continuous phenotypic drift, allowing adaptive survival in shifting biomes.
+              Mutation can change simulated traits; adaptive benefit is an outcome to measure, not a guaranteed result.
             </div>
           </div>
         </div>
@@ -199,9 +199,9 @@ export const CodeLab: React.FC<CodeLabProps> = ({ engine }) => {
       {activeCodeTab === 'stack' && (
         <div className="bg-[#120b22] border border-purple-900/40 rounded-2xl p-6 flex flex-col gap-5 shadow-xl">
           <div>
-            <h3 className="font-bold text-white text-base">Fringe Coding Tech Stack</h3>
+            <h3 className="font-bold text-white text-base">Application dependencies and exported example</h3>
             <p className="text-xs text-purple-400">
-              Key libraries and foundational frameworks featured in Digital Ecosystem Programming.
+              The browser application uses the dependencies declared in package.json. The Python export is generated source code and does not make the browser app a Python/DEAP/NetworkX application.
             </p>
           </div>
 
@@ -209,35 +209,35 @@ export const CodeLab: React.FC<CodeLabProps> = ({ engine }) => {
             <div className="p-4 bg-[#0a0515] border border-purple-800/40 rounded-xl">
               <div className="font-bold text-white text-sm mb-1">Python & Pygame</div>
               <div className="text-xs text-purple-300">
-                Powers real-time 60fps 2D physics, vector steering kinematics, spatial grids, and event loops.
+                Used by the generated standalone Python example. It is separate from the browser simulation engine.
               </div>
             </div>
 
             <div className="p-4 bg-[#0a0515] border border-purple-800/40 rounded-xl">
               <div className="font-bold text-white text-sm mb-1">DEAP (Genetic Algorithms)</div>
               <div className="text-xs text-purple-300">
-                Distributed Evolutionary Algorithms in Python for chromosome encoding, crossover, and fitness evaluation.
+                Not currently integrated into the browser application or its genome mutation pipeline.
               </div>
             </div>
 
             <div className="p-4 bg-[#0a0515] border border-purple-800/40 rounded-xl">
               <div className="font-bold text-white text-sm mb-1">NetworkX</div>
               <div className="text-xs text-purple-300">
-                Graph topological analysis of trophic food webs, predation cascades, and kinship lineages.
+                Not currently a declared browser dependency. The current food-web and lineage views are rendered by the React application.
               </div>
             </div>
 
             <div className="p-4 bg-[#0a0515] border border-purple-800/40 rounded-xl">
               <div className="font-bold text-white text-sm mb-1">Perlin & Simplex Noise</div>
               <div className="text-xs text-purple-300">
-                Procedural continuous terrain generation for fertility zones, elevation, and moisture gradients.
+                The current engine uses a 2D noise helper; this does not establish calibrated terrain, fertility, elevation, or moisture fields.
               </div>
             </div>
 
             <div className="p-4 bg-[#0a0515] border border-purple-800/40 rounded-xl">
               <div className="font-bold text-white text-sm mb-1">Matplotlib & Seaborn</div>
               <div className="text-xs text-purple-300">
-                Scientific plotting of population boom-bust curves, Lotka-Volterra phase spaces, and allele drift histograms.
+                The browser charts are rendered with Recharts. They are descriptive visualisations, not validated scientific analyses.
               </div>
             </div>
 

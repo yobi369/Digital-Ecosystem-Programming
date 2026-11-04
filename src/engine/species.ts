@@ -1,4 +1,5 @@
 import { Genome, SpeciesType } from '../types/ecosystem';
+import type { RandomSource } from './random';
 
 export const PRESET_GENOMES: Record<string, Genome> = {
   grazer: {
@@ -141,26 +142,35 @@ export const PRESET_GENOMES: Record<string, Genome> = {
 const PREFIXES = ['Proto', 'Neo', 'Giga', 'Hyper', 'Bio', 'Nano', 'Cybro', 'Astro', 'Xeno', 'Chrono', 'Void', 'Radiant', 'Stellar', 'Prismatic'];
 const SUFFIXES = ['poda', 'therium', 'vore', 'morph', 'phage', 'lisk', 'drake', 'drifter', 'runner', 'crawler', 'stalker', 'parasite', 'spire'];
 
-export function generateSpeciesName(type: SpeciesType, parentName?: string, generation = 1): string {
-  if (parentName && Math.random() > 0.35) {
-    if (Math.random() > 0.5) {
+export function generateSpeciesName(
+  type: SpeciesType,
+  parentName?: string,
+  generation = 1,
+  random: RandomSource = Math.random
+): string {
+  if (parentName && random() > 0.35) {
+    if (random() > 0.5) {
       return `${parentName} MK-${generation}`;
     } else {
-      const p = PREFIXES[Math.floor(Math.random() * PREFIXES.length)];
+      const p = PREFIXES[Math.floor(random() * PREFIXES.length)];
       return `${p}-${parentName}`;
     }
   }
-  const pre = PREFIXES[Math.floor(Math.random() * PREFIXES.length)];
-  const suf = SUFFIXES[Math.floor(Math.random() * SUFFIXES.length)];
+  const pre = PREFIXES[Math.floor(random() * PREFIXES.length)];
+  const suf = SUFFIXES[Math.floor(random() * SUFFIXES.length)];
   return `${pre}${suf}`;
 }
 
-export function mutateGenome(parent: Genome, globalMutationMultiplier = 1.0): Genome {
+export function mutateGenome(
+  parent: Genome,
+  globalMutationMultiplier = 1.0,
+  random: RandomSource = Math.random
+): Genome {
   const mRate = parent.mutationRate * globalMutationMultiplier;
   
   const mutateVal = (val: number, min: number, max: number, strength = 0.15): number => {
-    if (Math.random() < mRate) {
-      const delta = (Math.random() * 2 - 1) * (max - min) * strength;
+    if (random() < mRate) {
+      const delta = (random() * 2 - 1) * (max - min) * strength;
       return Math.min(max, Math.max(min, val + delta));
     }
     return val;
@@ -181,12 +191,12 @@ export function mutateGenome(parent: Genome, globalMutationMultiplier = 1.0): Ge
   let newName = parent.speciesName;
 
   // Occasional color mutation & speciation divergence
-  if (Math.random() < mRate * 0.5) {
-    const shift = Math.floor((Math.random() * 2 - 1) * 30);
+  if (random() < mRate * 0.5) {
+    const shift = Math.floor((random() * 2 - 1) * 30);
     // Slight hue tweak
     newColor = adjustHue(parent.color, shift);
     newGlow = adjustHue(parent.glowColor, shift);
-    newName = generateSpeciesName(parent.type, parent.speciesName);
+    newName = generateSpeciesName(parent.type, parent.speciesName, 1, random);
   }
 
   return {

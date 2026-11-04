@@ -13,6 +13,9 @@ import {
 import { FastNoise2D } from './perlin';
 import { mutateGenome, PRESET_GENOMES, generateSpeciesName } from './species';
 import { sounds } from './sound';
+import { SeededRandom, createSeed, hashString, hashStringToUint32, stableStringify, RNG_ALGORITHM, RNG_VERSION } from './random';
+import { BUILD_REVISION, MODEL_VERSION } from './experiment';
+import type { ExperimentManifestV1, InitialConditionsRecord } from './experiment';
 
 // Spatial Hash Grid for high-performance physics & neighbor querying
 class SpatialGrid {
@@ -170,18 +173,141 @@ export class EcosystemEngine {
   public selectedOrganismId: string | null = null;
   public disasterParticles: { x: number; y: number; targetX: number; targetY: number; progress: number; type: DisasterType }[] = [];
   public fossils: FossilRecord[] = [];
+  public seed: string;
+  private simulationRng!: SeededRandom;
+  private visualRng!: SeededRandom;
+  private initialConditions: InitialConditionsRecord | null = null;
+  private experimentStepCount = 0;
+  private firstStepSize: number | null = null;
+  private constantStepSize = true;
+  private stepScheduleHash = 2166136261;
 
   private organismCounter = 0;
   private foodCounter = 0;
   private nextStatRecordTime = 0;
 
-  constructor(width = 1600, height = 1000) {
+  constructor(width = 1600, height = 1000, seed?: string | number) {
+    this.seed = seed === undefined ? createSeed() : String(seed);
     this.environment.worldWidth = width;
     this.environment.worldHeight = height;
     this.initWorld();
   }
 
+  private resetRandomStreams() {
+    this.simulationRng = new SeededRandom(this.seed, 'simulation');
+    this.visualRng = new SeededRandom(this.seed, 'visual');
+    this.noiseGen.reseed(hashStringToUint32(this.seed));
+  }
+
+  public random(): number {
+    return this.simulationRng.next();
+  }
+
+  private visualRandom(): number {
+    return this.visualRng.next();
+  }
+
+  private resetExperimentProgress() {
+    this.experimentStepCount = 0;
+    this.firstStepSize = null;
+    this.constantStepSize = true;
+    this.stepScheduleHash = 2166136261;
+  }
+
+  private recordStep(dt: number) {
+    this.experimentStepCount += 1;
+    if (this.firstStepSize === null) {
+      this.firstStepSize = dt;
+    } else if (dt !== this.firstStepSize) {
+      this.constantStepSize = false;
+    }
+    const encoded = dt.toPrecision(17) + ';';
+    for (let i = 0; i < encoded.length; i += 1) {
+      this.stepScheduleHash = Math.imul(this.stepScheduleHash ^ encoded.charCodeAt(i), 16777619) >>> 0;
+    }
+  }
+
+  public captureInitialConditions(source = 'current-state'): InitialConditionsRecord {
+    const organismsByType: Partial<Record<SpeciesType, number>> = {};
+    for (const organism of this.organisms) {
+      organismsByType[organism.genome.type] = (organismsByType[organism.genome.type] ?? 0) + 1;
+    }
+    const foodByType: Record<string, number> = {};
+    for (const item of this.food) {
+      foodByType[item.type] = (foodByType[item.type] ?? 0) + 1;
+    }
+    const environment = { ...this.environment };
+    const stateFingerprint = hashString(stableStringify({
+      environment,
+      organisms: this.organisms,
+      food: this.food,
+      stats: this.stats,
+    }));
+    this.initialConditions = {
+      source,
+      stateFingerprint: 'fnv1a32:' + stateFingerprint,
+      organismCount: this.organisms.length,
+      organismsByType,
+      foodCount: this.food.length,
+      foodByType,
+      environment,
+      capturedAtSimTime: this.stats.timeElapsed,
+    };
+    this.resetExperimentProgress();
+    return this.initialConditions;
+  }
+
+  public createExperimentManifest(): ExperimentManifestV1 {
+    const initial = this.initialConditions ?? this.captureInitialConditions('current-state');
+    const fingerprint = 'fnv1a32:' + (this.stepScheduleHash >>> 0).toString(16).padStart(8, '0');
+    const stepSchedule: ExperimentManifestV1['run']['stepSchedule'] =
+      this.experimentStepCount === 0
+        ? { kind: 'none', stepCount: 0, fingerprint }
+        : this.constantStepSize && this.firstStepSize !== null
+          ? { kind: 'constant', stepCount: this.experimentStepCount, stepSizeSeconds: this.firstStepSize, fingerprint }
+          : { kind: 'variable', stepCount: this.experimentStepCount, fingerprint, replayRequiresRecordedSchedule: true };
+
+    return {
+      manifestType: 'digital-ecosystem-experiment',
+      manifestVersion: 1,
+      createdAt: new Date().toISOString(),
+      repository: { name: 'yobi369/Digital-Ecosystem-Programming', revision: BUILD_REVISION },
+      model: { name: 'Digital Ecosystem Programming Lab', version: MODEL_VERSION },
+      randomness: {
+        seed: this.seed,
+        algorithm: RNG_ALGORITHM,
+        version: RNG_VERSION,
+        streams: ['simulation', 'visual'],
+      },
+      world: { width: this.environment.worldWidth, height: this.environment.worldHeight },
+      initialConditions: initial,
+      parameters: {
+        initialEnvironment: { ...initial.environment },
+        currentEnvironment: { ...this.environment },
+      },
+      run: {
+        startTimeSeconds: initial.capturedAtSimTime,
+        endTimeSeconds: this.stats.timeElapsed,
+        durationSeconds: Number(Math.max(0, this.stats.timeElapsed - initial.capturedAtSimTime).toFixed(9)),
+        totalTickCount: this.stats.tick,
+        stepCount: this.experimentStepCount,
+        stepSchedule,
+      },
+      reproducibility: {
+        contract: 'Equivalent state is expected for the same seed, initial state/configuration, model revision, ordered interventions, and applied update-step sequence.',
+        limitations: [
+          'Interactive interventions and their timing are not automatically recorded.',
+          'Variable update-step sequences are fingerprinted but not stored; retain the exact sequence to replay them.',
+          'For imported checkpoints, retain the matching world snapshot; the manifest stores an initial-state fingerprint, not the full checkpoint.',
+          'The model remains exploratory and is not empirically validated.',
+        ],
+      },
+    };
+  }
+
   initWorld() {
+    this.resetRandomStreams();
+    this.resetExperimentProgress();
     this.organisms = [];
     this.food = [];
     this.particles = [];
@@ -191,15 +317,24 @@ export class EcosystemEngine {
     this.stats.deathsCount = 0;
     this.stats.timeElapsed = 0;
     this.stats.tick = 0;
+    this.stats.maxGeneration = 1;
+    this.stats.extinctSpecies = [];
     this.organismCounter = 0;
+    this.foodCounter = 0;
+    this.nextStatRecordTime = 0;
+    this.selectedOrganismId = null;
+    this.disasterParticles = [];
+    this.environment.disasterActive = null;
+    this.environment.disasterTimeRemaining = 0;
+    this.environment.timeOfDay = 0.2;
 
     // Seed initial plants (flora)
     const plantCount = Math.floor((this.environment.worldWidth * this.environment.worldHeight) / 5500);
     for (let i = 0; i < plantCount; i++) {
       this.spawnPlant(
-        Math.random() * (this.environment.worldWidth - 40) + 20,
-        Math.random() * (this.environment.worldHeight - 40) + 20,
-        Math.random() * 0.8 + 0.2
+        this.random() * (this.environment.worldWidth - 40) + 20,
+        this.random() * (this.environment.worldHeight - 40) + 20,
+        this.random() * 0.8 + 0.2
       );
     }
 
@@ -207,8 +342,8 @@ export class EcosystemEngine {
     for (let i = 0; i < 35; i++) {
       this.spawnOrganism(
         PRESET_GENOMES.grazer,
-        Math.random() * this.environment.worldWidth,
-        Math.random() * this.environment.worldHeight
+        this.random() * this.environment.worldWidth,
+        this.random() * this.environment.worldHeight
       );
     }
 
@@ -216,8 +351,8 @@ export class EcosystemEngine {
     for (let i = 0; i < 14; i++) {
       this.spawnOrganism(
         PRESET_GENOMES.stalker,
-        Math.random() * this.environment.worldWidth,
-        Math.random() * this.environment.worldHeight
+        this.random() * this.environment.worldWidth,
+        this.random() * this.environment.worldHeight
       );
     }
 
@@ -225,8 +360,8 @@ export class EcosystemEngine {
     for (let i = 0; i < 16; i++) {
       this.spawnOrganism(
         PRESET_GENOMES.decomposer,
-        Math.random() * this.environment.worldWidth,
-        Math.random() * this.environment.worldHeight
+        this.random() * this.environment.worldWidth,
+        this.random() * this.environment.worldHeight
       );
     }
 
@@ -234,8 +369,8 @@ export class EcosystemEngine {
     for (let i = 0; i < 10; i++) {
       this.spawnOrganism(
         PRESET_GENOMES.symbiont,
-        Math.random() * this.environment.worldWidth,
-        Math.random() * this.environment.worldHeight
+        this.random() * this.environment.worldWidth,
+        this.random() * this.environment.worldHeight
       );
     }
 
@@ -243,12 +378,13 @@ export class EcosystemEngine {
     for (let i = 0; i < 3; i++) {
       this.spawnOrganism(
         PRESET_GENOMES.apex,
-        Math.random() * this.environment.worldWidth,
-        Math.random() * this.environment.worldHeight
+        this.random() * this.environment.worldWidth,
+        this.random() * this.environment.worldHeight
       );
     }
 
     this.updateStats();
+    this.captureInitialConditions('seeded-default-world');
   }
 
   spawnPlant(x: number, y: number, initialGrowth = 0.5): FoodItem {
@@ -314,7 +450,7 @@ export class EcosystemEngine {
     initialEnergy?: number
   ): OrganismState {
     const id = `org_${++this.organismCounter}`;
-    const angle = Math.random() * Math.PI * 2;
+    const angle = this.random() * Math.PI * 2;
     const speed = genome.maxSpeed * 0.5;
 
     // Initialize Neural Brain Weights
@@ -322,7 +458,7 @@ export class EcosystemEngine {
     for (let inp = 0; inp < 6; inp++) {
       const row: number[] = [];
       for (let out = 0; out < 5; out++) {
-        row.push(Math.random() * 2 - 1);
+        row.push(this.random() * 2 - 1);
       }
       brainWeights.push(row);
     }
@@ -372,18 +508,18 @@ export class EcosystemEngine {
 
   emitParticles(x: number, y: number, color: string, count = 8, speed = 2) {
     for (let i = 0; i < count; i++) {
-      const a = Math.random() * Math.PI * 2;
-      const s = Math.random() * speed + 0.5;
+      const a = this.visualRandom() * Math.PI * 2;
+      const s = this.visualRandom() * speed + 0.5;
       this.particles.push({
         x,
         y,
         vx: Math.cos(a) * s,
         vy: Math.sin(a) * s,
         color,
-        size: Math.random() * 3 + 1.5,
+        size: this.visualRandom() * 3 + 1.5,
         alpha: 1.0,
         life: 1.0,
-        decay: Math.random() * 0.04 + 0.02,
+        decay: this.visualRandom() * 0.04 + 0.02,
       });
     }
   }
@@ -397,8 +533,8 @@ export class EcosystemEngine {
       // Spawn 4-8 meteor impact targets
       const meteorCount = 6;
       for (let i = 0; i < meteorCount; i++) {
-        const tx = Math.random() * this.environment.worldWidth;
-        const ty = Math.random() * this.environment.worldHeight;
+        const tx = this.random() * this.environment.worldWidth;
+        const ty = this.random() * this.environment.worldHeight;
         this.disasterParticles.push({
           x: tx - 300,
           y: -100,
@@ -411,8 +547,8 @@ export class EcosystemEngine {
     } else if (type === 'gamma_burst') {
       // Mutates 60% of all organisms violently!
       this.organisms.forEach((o) => {
-        if (Math.random() < 0.6) {
-          o.genome = mutateGenome(o.genome, 3.5);
+        if (this.random() < 0.6) {
+          o.genome = mutateGenome(o.genome, 3.5, () => this.random());
           this.emitParticles(o.x, o.y, '#ec4899', 10, 4);
         }
       });
@@ -420,8 +556,8 @@ export class EcosystemEngine {
       // Spawns mass flora
       for (let i = 0; i < 70; i++) {
         this.spawnPlant(
-          Math.random() * this.environment.worldWidth,
-          Math.random() * this.environment.worldHeight,
+          this.random() * this.environment.worldWidth,
+          this.random() * this.environment.worldHeight,
           0.9
         );
       }
@@ -429,8 +565,9 @@ export class EcosystemEngine {
   }
 
   update(dt: number) {
-    if (dt <= 0) return;
+    if (!Number.isFinite(dt) || dt <= 0) return;
     const cappedDt = Math.min(dt, 0.1);
+    this.recordStep(cappedDt);
 
     this.stats.timeElapsed += cappedDt;
     this.stats.tick++;
@@ -540,15 +677,15 @@ export class EcosystemEngine {
     }
 
     // Respawn new plants if population is below capacity
-    if (plantCount < maxPlants && Math.random() < 0.35 * this.environment.plantRespawnRate * activeSunlight) {
+    if (plantCount < maxPlants && this.random() < 0.35 * this.environment.plantRespawnRate * activeSunlight) {
       // Prefer spawning near existing plants (clustering / seed dispersal)
-      let sx = Math.random() * (this.environment.worldWidth - 60) + 30;
-      let sy = Math.random() * (this.environment.worldHeight - 60) + 30;
+      let sx = this.random() * (this.environment.worldWidth - 60) + 30;
+      let sy = this.random() * (this.environment.worldHeight - 60) + 30;
 
-      if (this.food.length > 0 && Math.random() > 0.4) {
-        const randomParent = this.food[Math.floor(Math.random() * this.food.length)];
-        const spread = (Math.random() * 80 + 20);
-        const a = Math.random() * Math.PI * 2;
+      if (this.food.length > 0 && this.random() > 0.4) {
+        const randomParent = this.food[Math.floor(this.random() * this.food.length)];
+        const spread = (this.random() * 80 + 20);
+        const a = this.random() * Math.PI * 2;
         sx = Math.min(this.environment.worldWidth - 20, Math.max(20, randomParent.x + Math.cos(a) * spread));
         sy = Math.min(this.environment.worldHeight - 20, Math.max(20, randomParent.y + Math.sin(a) * spread));
       }
@@ -603,12 +740,12 @@ export class EcosystemEngine {
           org.isPregnant = false;
           const litter = org.genome.litterSize || 1;
           for (let l = 0; l < litter; l++) {
-            const mutatedGenome = mutateGenome(org.genome, this.environment.globalMutationRate);
+            const mutatedGenome = mutateGenome(org.genome, this.environment.globalMutationRate, () => this.random());
             const babyEnergy = org.genome.reproductionCost * 0.8;
             const baby = this.spawnOrganism(
               mutatedGenome,
-              org.x + (Math.random() * 20 - 10),
-              org.y + (Math.random() * 20 - 10),
+              org.x + (this.random() * 20 - 10),
+              org.y + (this.random() * 20 - 10),
               org.id,
               org.generation + 1,
               babyEnergy
@@ -651,7 +788,7 @@ export class EcosystemEngine {
         }
       }
 
-      if (closestThreat && Math.random() < org.genome.cautiousness * 1.5) {
+      if (closestThreat && this.random() < org.genome.cautiousness * 1.5) {
         org.state = 'fleeing';
         const dx = org.x - closestThreat.x;
         const dy = org.y - closestThreat.y;
@@ -859,7 +996,7 @@ export class EcosystemEngine {
       // 5. Default Wandering Brownian Motion
       if (!targetFound) {
         org.state = 'wandering';
-        const wanderAngle = org.heading + (Math.random() - 0.5) * 0.8;
+        const wanderAngle = org.heading + (this.random() - 0.5) * 0.8;
         steerX += Math.cos(wanderAngle);
         steerY += Math.sin(wanderAngle);
       }
@@ -1095,40 +1232,132 @@ export class EcosystemEngine {
     return rootNode;
   }
 
-  // Export State to JSON
+  // Export State to JSON (v3 includes RNG and continuation state).
   public exportState(): string {
     const exportObject = {
-      version: '2.0',
+      version: '3.0',
       timestamp: Date.now(),
+      random: {
+        algorithm: RNG_ALGORITHM,
+        version: RNG_VERSION,
+        seed: this.seed,
+        simulationState: this.simulationRng.getState(),
+        visualState: this.visualRng.getState(),
+      },
+      counters: {
+        organismCounter: this.organismCounter,
+        foodCounter: this.foodCounter,
+      },
+      experimentProgress: {
+        stepCount: this.experimentStepCount,
+        firstStepSize: this.firstStepSize,
+        constantStepSize: this.constantStepSize,
+        stepScheduleHash: this.stepScheduleHash,
+      },
+      initialConditions: this.initialConditions,
+      nextStatRecordTime: this.nextStatRecordTime,
       environment: this.environment,
       stats: this.stats,
       organisms: this.organisms,
       food: this.food,
+      particles: this.particles,
+      disasterParticles: this.disasterParticles,
       history: this.history,
       fossils: this.fossils,
     };
     return JSON.stringify(exportObject, null, 2);
   }
 
-  // Import State from JSON
+  // Imports legacy v2 snapshots and v3 snapshots. Legacy files lack their old
+  // RNG position, so they receive a deterministic seed for future continuation.
   public importState(jsonStr: string): boolean {
     try {
       const parsed = JSON.parse(jsonStr);
-      if (parsed.environment && Array.isArray(parsed.organisms) && Array.isArray(parsed.food)) {
-        this.environment = { ...this.environment, ...parsed.environment };
-        this.organisms = parsed.organisms;
-        this.food = parsed.food;
-        this.history = parsed.history || [];
-        this.fossils = parsed.fossils || [];
-        if (parsed.stats) {
-          this.stats = { ...this.stats, ...parsed.stats };
-        }
-        this.updateStats();
-        return true;
+      if (!parsed.environment || !Array.isArray(parsed.organisms) || !Array.isArray(parsed.food)) {
+        return false;
       }
-      return false;
+
+      const savedRandom = parsed.random;
+      if (savedRandom && (
+        savedRandom.algorithm !== RNG_ALGORITHM ||
+        savedRandom.version !== RNG_VERSION ||
+        typeof savedRandom.seed !== 'string' ||
+        !Number.isInteger(savedRandom.simulationState) ||
+        savedRandom.simulationState < 0 ||
+        savedRandom.simulationState > 0xffffffff ||
+        !Number.isInteger(savedRandom.visualState) ||
+        savedRandom.visualState < 0 ||
+        savedRandom.visualState > 0xffffffff
+      )) {
+        return false;
+      }
+
+      this.environment = { ...this.environment, ...parsed.environment };
+      this.organisms = parsed.organisms;
+      this.food = parsed.food;
+      this.history = Array.isArray(parsed.history) ? parsed.history : [];
+      this.fossils = Array.isArray(parsed.fossils) ? parsed.fossils : [];
+      this.particles = Array.isArray(parsed.particles) ? parsed.particles : [];
+      this.disasterParticles = Array.isArray(parsed.disasterParticles) ? parsed.disasterParticles : [];
+      if (parsed.stats) {
+        this.stats = { ...this.stats, ...parsed.stats };
+      }
+
+      this.seed = savedRandom ? savedRandom.seed : 'legacy-save-' + String(parsed.timestamp ?? 'unknown');
+      this.resetRandomStreams();
+      if (savedRandom) {
+        this.simulationRng.setState(savedRandom.simulationState);
+        this.visualRng.setState(savedRandom.visualState);
+      }
+
+      const maxSuffix = (items: Array<{ id?: string }>, pattern: RegExp) =>
+        items.reduce((max, item) => {
+          const match = String(item.id ?? '').match(pattern);
+          return match ? Math.max(max, Number(match[1])) : max;
+        }, 0);
+      this.organismCounter = Number.isInteger(parsed.counters?.organismCounter)
+        ? parsed.counters.organismCounter
+        : maxSuffix(this.organisms, /^org_(\d+)$/);
+      this.foodCounter = Number.isInteger(parsed.counters?.foodCounter)
+        ? parsed.counters.foodCounter
+        : maxSuffix(this.food, /^(?:plant|meat|crystal|spore)_(\d+)$/);
+      this.nextStatRecordTime = Number.isFinite(parsed.nextStatRecordTime)
+        ? parsed.nextStatRecordTime
+        : this.stats.timeElapsed;
+      this.selectedOrganismId = null;
+      this.grid.clear();
+      this.updateStats();
+
+      if (parsed.initialConditions && typeof parsed.initialConditions.stateFingerprint === 'string') {
+        this.initialConditions = parsed.initialConditions;
+      } else {
+        this.captureInitialConditions(savedRandom ? 'imported-checkpoint' : 'legacy-import');
+      }
+
+      const progress = parsed.experimentProgress;
+      if (progress && Number.isInteger(progress.stepCount) && progress.stepCount >= 0) {
+        this.experimentStepCount = progress.stepCount;
+        this.firstStepSize = Number.isFinite(progress.firstStepSize) ? progress.firstStepSize : null;
+        this.constantStepSize = Boolean(progress.constantStepSize);
+        this.stepScheduleHash = Number.isInteger(progress.stepScheduleHash)
+          ? progress.stepScheduleHash >>> 0
+          : 2166136261;
+      }
+      return true;
     } catch {
       return false;
+    }
+  }
+
+  public runSteps(stepCount: number, dt: number): void {
+    if (!Number.isInteger(stepCount) || stepCount < 0) {
+      throw new RangeError('stepCount must be a non-negative integer');
+    }
+    if (!Number.isFinite(dt) || dt <= 0) {
+      throw new RangeError('dt must be a finite positive number');
+    }
+    for (let step = 0; step < stepCount; step += 1) {
+      this.update(dt);
     }
   }
 
