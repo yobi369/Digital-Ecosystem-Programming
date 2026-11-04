@@ -52,8 +52,8 @@ export const StudyScenariosModal: React.FC<StudyScenariosModalProps> = ({
             herdInstinct: 0.95,
             cooperation: 0.95,
           },
-          Math.random() * 600 + 100,
-          Math.random() * 600 + 100
+          engine.random() * 600 + 100,
+          engine.random() * 600 + 100
         );
       }
       // Solitary species
@@ -68,18 +68,18 @@ export const StudyScenariosModal: React.FC<StudyScenariosModalProps> = ({
             cooperation: 0.05,
             aggression: 0.6,
           },
-          Math.random() * 600 + 800,
-          Math.random() * 600 + 100
+          engine.random() * 600 + 800,
+          engine.random() * 600 + 100
         );
       }
     } else if (type === 'extinction_events') {
       // Overpopulated world followed by immediate meteor cataclysm
       engine.initWorld();
       for (let i = 0; i < 60; i++) {
-        engine.spawnOrganism(PRESET_GENOMES.grazer, Math.random() * 1200, Math.random() * 800);
+        engine.spawnOrganism(PRESET_GENOMES.grazer, engine.random() * 1200, engine.random() * 800);
       }
       for (let i = 0; i < 25; i++) {
-        engine.spawnOrganism(PRESET_GENOMES.stalker, Math.random() * 1200, Math.random() * 800);
+        engine.spawnOrganism(PRESET_GENOMES.stalker, engine.random() * 1200, engine.random() * 800);
       }
       setTimeout(() => {
         engine.triggerDisaster('meteor');
@@ -98,6 +98,7 @@ export const StudyScenariosModal: React.FC<StudyScenariosModalProps> = ({
       engine.environment.plantRespawnRate = 0.7;
     }
 
+    engine.captureInitialConditions('scenario:' + type);
     onApplyScenario();
     onClose();
   };
