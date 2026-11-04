@@ -45,6 +45,18 @@ describe('seeded randomness and reproducible simulation', () => {
     expect(comparableState(a)).toEqual(comparableState(b));
   });
 
+  test('reset replays the same seeded initial conditions', () => {
+    const engine = new EcosystemEngine(400, 300, 'reset-seed');
+    const initialFingerprint = engine.createExperimentManifest().initialConditions.stateFingerprint;
+    const initialPopulation = engine.organisms.length;
+    engine.runSteps(12, 0.05);
+    engine.initWorld();
+    const resetManifest = engine.createExperimentManifest();
+    expect(resetManifest.initialConditions.stateFingerprint).toBe(initialFingerprint);
+    expect(engine.organisms.length).toBe(initialPopulation);
+    expect(engine.stats.timeElapsed).toBe(0);
+  });
+
   test('visual particle draws do not perturb simulation randomness', () => {
     const a = new EcosystemEngine(400, 300, 'stream-seed');
     const b = new EcosystemEngine(400, 300, 'stream-seed');
