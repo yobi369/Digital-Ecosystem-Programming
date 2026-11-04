@@ -326,6 +326,7 @@ export class EcosystemEngine {
     this.disasterParticles = [];
     this.environment.disasterActive = null;
     this.environment.disasterTimeRemaining = 0;
+    this.environment.timeOfDay = 0.2;
 
     // Seed initial plants (flora)
     const plantCount = Math.floor((this.environment.worldWidth * this.environment.worldHeight) / 5500);
