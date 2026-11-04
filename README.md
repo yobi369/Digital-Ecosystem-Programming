@@ -49,7 +49,7 @@ bun run build
 
 The engine supports seeded simulation randomness, separate visual randomness, fixed-step runs through `runSteps`, versioned world snapshots, and a downloadable experiment manifest. Reproducible replay still requires the same code revision, configuration, initial state, ordered interventions, and applied time-step sequence. Interactive intervention logging is not yet implemented.
 
-The current automated gates run a focused Bun regression test for world-reset/telemetry behaviour, TypeScript compilation, and a production Vite build. They are not a substitute for broad behavioural, scientific, accessibility, or browser-based acceptance tests. Test coverage remains limited and is not represented as comprehensive.
+The current automated gates run Bun regression tests for world reset/telemetry, seeded fixed-step replay, RNG continuation, mutation injection, visual-stream isolation, v2 save compatibility, and manifest metadata, plus TypeScript compilation and a production Vite build. They are not a substitute for broad behavioural, scientific, accessibility, or browser-based acceptance tests. Test coverage remains limited and is not represented as comprehensive.
 
 ## Configuration and secrets
 
