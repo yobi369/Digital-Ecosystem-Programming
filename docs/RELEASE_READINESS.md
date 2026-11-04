@@ -9,10 +9,12 @@ The project is an early-stage browser simulation. A successful Vite build is not
 - [x] Production bundle build is available through `bun run build`.
 - [x] Initial Bun regression test for world reset and telemetry restart.
 - [ ] Broad unit/integration/property test suite covering core simulation rules.
-- [ ] Deterministic seeded simulation.
-- [ ] Validated and versioned import/save schema.
+- [x] Seeded simulation RNG, independent visual RNG, and fixed-step replay regression tests.
+- [x] Versioned v3 save snapshots with RNG/counter continuation and legacy v2 import compatibility.
+- [ ] Strict schema validation and replayable interactive intervention logs.
 - [ ] Browser accessibility and responsive acceptance tests.
 - [ ] Performance budgets and stress tests.
+- [x] Versioned experiment manifest export for seed, model/repository revision, initial conditions, parameters, and run metadata.
 - [ ] Empirical calibration and holdout validation.
 - [ ] Independent reproduction package.
 - [ ] Production data persistence and recovery (only if a backend is introduced).
@@ -43,3 +45,7 @@ The project is an early-stage browser simulation. A successful Vite build is not
 ## Current release decision
 
 **Not ready for production scientific use.** It may be deployed as an exploratory educational prototype after build and browser smoke checks. Do not represent it as a validated scientific instrument or a secure hosted research platform.
+
+## Reproducibility scope
+
+The seeded engine and fixed-step replay tests establish a repeatable software execution path for equivalent initial state, configuration, model revision, ordered interventions, and applied time-step sequence. They do not make the ecological rules empirically valid. Interactive intervention logs, arbitrary variable-step schedules, strict import validation, calibration, holdout validation, sensitivity analysis, and independent reproduction remain release blockers for research-grade use.
