@@ -232,8 +232,8 @@ export default function App() {
       sounds.playBirth();
       const clone = engine.spawnOrganism(
         org.genome,
-        org.x + (Math.random() * 30 - 15),
-        org.y + (Math.random() * 30 - 15),
+        org.x + (engine.random() * 30 - 15),
+        org.y + (engine.random() * 30 - 15),
         org.id,
         org.generation
       );
@@ -245,7 +245,7 @@ export default function App() {
   const handleMutateOrganism = useCallback(
     (org: OrganismState) => {
       sounds.playClick();
-      org.genome = mutateGenome(org.genome, 2.5);
+      org.genome = mutateGenome(org.genome, 2.5, () => engine.random());
       engine.emitParticles(org.x, org.y, '#ec4899', 15, 3.5);
       setSelectedOrganism({ ...org });
     },
@@ -280,8 +280,8 @@ export default function App() {
       for (let i = 0; i < count; i++) {
         engine.spawnOrganism(
           customGenome,
-          Math.random() * (engine.environment.worldWidth - 100) + 50,
-          Math.random() * (engine.environment.worldHeight - 100) + 50
+          engine.random() * (engine.environment.worldWidth - 100) + 50,
+          engine.random() * (engine.environment.worldHeight - 100) + 50
         );
       }
     },
