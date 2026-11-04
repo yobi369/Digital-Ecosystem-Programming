@@ -187,7 +187,7 @@ export const CodeLab: React.FC<CodeLabProps> = ({ engine }) => {
               Offspring receive mutated genome values through the project's mutation helper. The current implementation should not be described as a DEAP pipeline or Gaussian mutation without verification.
             </p>
             <div className="p-3 bg-[#080410] border border-purple-950 rounded-xl font-mono text-xs text-fuchsia-300">
-              offspringGenome = mutateGenome(parentGenome, mutationRate)
+              offspringGenome = mutateGenome(parentGenome, mutationRate, () => engine.random())
             </div>
             <div className="text-[11px] text-purple-400 font-mono">
               Mutation can change simulated traits; adaptive benefit is an outcome to measure, not a guaranteed result.
