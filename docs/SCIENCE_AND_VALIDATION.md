@@ -21,7 +21,7 @@ These are abstractions. A named organism type, genome field, chart, or trophic l
 
 ## Known validation gaps
 
-1. **Randomness and reproducibility:** the engine uses ambient random values in world initialisation, behaviour, reproduction, and mutation. Runs cannot currently be assumed to be reproducible from a recorded seed.
+1. **Reproducibility (partial):** seeded simulation and visual streams, v3 RNG-aware snapshots, and a versioned experiment manifest are implemented. Fixed-step runs with identical initial state/configuration, seed, revision, and ordered interventions are repeatable in regression tests. Interactive intervention logs and arbitrary variable-step schedules are not captured automatically.
 2. **Parameter calibration:** no defensible calibration dataset or documented parameter-fitting procedure is currently part of the repository.
 3. **Independent validation:** no untouched holdout dataset or independent replication package is supplied.
 4. **Mechanistic grounding:** model rules and parameter units need a formal specification and comparison with accepted ecological mechanisms.
@@ -50,10 +50,12 @@ Every reproducible experiment should capture:
 - Mark all heuristic rules as heuristics.
 
 ### Phase 2 — Reproducible execution
-- Inject a seeded RNG rather than calling `Math.random` throughout domain logic.
-- Ensure identical seed + configuration + code revision produces identical outputs.
-- Add deterministic fixtures and regression tests.
-- Version the save format and validate imported state.
+- [x] Inject a versioned seeded RNG into simulation domain logic and isolate visual randomness.
+- [x] Add deterministic fixed-step replay tests and save/restore RNG continuation.
+- [x] Version snapshots as v3 and preserve import compatibility with v2 worlds.
+- [x] Export a machine-readable experiment manifest with seed, RNG identity, revision, configuration, initial-condition fingerprint, and run metadata.
+- [ ] Record interactive interventions and arbitrary variable-step schedules as replayable event logs.
+- [ ] Add strict schema validation and adversarial malformed-import tests.
 
 ### Phase 3 — Calibration
 - Select a clearly scoped target system and public, documented observations.
@@ -88,3 +90,9 @@ Avoid:
 - "accurate ecological forecast"
 
 These stronger claims require evidence from the validation programme above.
+
+## Implemented reproducibility baseline
+
+The current engine uses a versioned `mulberry32` generator with independent simulation and visual streams. The experiment manifest schema is version 1; world snapshots are version 3. Regression tests cover same-seed fixed-step equivalence, RNG state restoration, genome mutation with an injected source, visual-stream independence, v3 continuation, and legacy v2 import.
+
+These are software reproducibility checks, not scientific validation. The manifest's state fingerprint uses FNV-1a for compact change detection and is not cryptographic. A manifest alone cannot reconstruct an imported checkpoint; retain the matching snapshot. Exact replay of interactive scenarios still requires an external record of actions/timing, and variable update-step sequences are fingerprinted rather than stored. Calibration, untouched holdout evaluation, sensitivity/uncertainty analysis, and independent reproduction remain outstanding.
