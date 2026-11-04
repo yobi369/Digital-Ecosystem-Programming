@@ -41,11 +41,11 @@ The presence of a browser save/load interface does not establish durable cloud p
 ## Engineering direction
 
 1. Separate deterministic domain rules from browser rendering and sound effects.
-2. Introduce an injected, seeded random-number generator for repeatable experiments.
+2. Use the injected, seeded simulation and visual RNG streams; continue recording interventions and validating save imports.
 3. Define a versioned simulation-state schema and validate imports before mutating a running world.
 4. Add unit and property-based tests for movement, resource accounting, reproduction, mutation, predation, and death.
 5. Move expensive simulation work to a Worker when profiling demonstrates main-thread contention.
-6. Define an experiment record containing model version, seed, parameters, initial state, and output summary.
+6. Export a versioned experiment manifest containing model/repository revision, seed/RNG identity, world and environment configuration, initial-state fingerprint/counts, and run/step metadata.
 7. Only add backend persistence or accounts when there is a defined user and data-governance requirement.
 
 ## Change discipline
@@ -56,3 +56,11 @@ Simulation rule changes must include:
 - Expected invariants and edge cases.
 - Reproducible tests with fixed seeds.
 - A note describing whether existing saved worlds remain compatible.
+
+## Seeded simulation and experiment artifacts
+
+The engine accepts an optional seed as its third constructor argument. The default seed is generated once per engine instance and is included in exported state and manifests. The `mulberry32` RNG is versioned as `1`; separate `simulation` and `visual` streams prevent particle animation draws from changing ecological outcomes. Simulation domain randomness and genome mutation receive the injected simulation source. UI interventions also draw from that source so their random choices are deterministic when the same actions occur in the same order.
+
+For a controlled replay, use the same seed, world dimensions/environment configuration, model revision, ordered interventions, and exact applied `update(dt)` sequence. `runSteps(count, dt)` provides a fixed-step headless path. The manifest records constant step size/count when possible; variable schedules receive a fingerprint but must be retained externally to replay exactly. Interactive actions and their timing are not yet event-logged.
+
+World snapshots are version `3.0` and include both RNG states, counters, particles/disaster state, telemetry scheduling, initial-condition metadata, and step-schedule progress. Existing v2 snapshots remain importable; because they did not contain RNG state, their historical random stream cannot be recovered. A versioned JSON experiment manifest is downloadable from Save/Load & Research Data Export. Its initial-state fingerprint is a compact integrity identifier, not a cryptographic digest or a replacement for the matching checkpoint.
