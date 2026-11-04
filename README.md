@@ -42,9 +42,12 @@ Open the local URL printed by Vite (the dev server is configured for port 3000).
 ## Quality checks
 
 ```bash
+bun run test
 bun run lint
 bun run build
 ```
+
+The engine supports seeded simulation randomness, separate visual randomness, fixed-step runs through `runSteps`, versioned world snapshots, and a downloadable experiment manifest. Reproducible replay still requires the same code revision, configuration, initial state, ordered interventions, and applied time-step sequence. Interactive intervention logging is not yet implemented.
 
 The current automated gates run a focused Bun regression test for world-reset/telemetry behaviour, TypeScript compilation, and a production Vite build. They are not a substitute for broad behavioural, scientific, accessibility, or browser-based acceptance tests. Test coverage remains limited and is not represented as comprehensive.
 
@@ -89,6 +92,10 @@ docs/
 ## Scientific use
 
 For classroom exploration, record the exact configuration, simulation duration, initial conditions, randomisation procedure, and software revision for every experiment. Do not infer real-world population trajectories from the current simulation. The scientific validation roadmap in [docs/SCIENCE_AND_VALIDATION.md](docs/SCIENCE_AND_VALIDATION.md) defines the work required before stronger claims are appropriate.
+
+## Reproducible experiments
+
+Open **Save / Load & Research Data Export** and choose **Export Experiment Manifest** to download a versioned JSON record of the seed, RNG algorithm/version, model and repository revision, world configuration, initial-condition fingerprint/counts, environment parameters, and run/step metadata. Keep the matching world snapshot and intervention notes alongside the manifest when needed. The manifest is metadata, not a full checkpoint or evidence of scientific validation.
 
 ## License
 
